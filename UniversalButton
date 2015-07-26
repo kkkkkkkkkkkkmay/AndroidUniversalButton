@@ -1,3 +1,4 @@
+
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -12,6 +13,8 @@ import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.widget.Button;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 /**
  * Created by kot32 on 15/7/26.
  */
@@ -19,7 +22,7 @@ public class UniversalButton extends Button {
 
 
     private boolean isStillDown = false;
-    private boolean isFirstClick = true;
+    private AtomicBoolean isFirstClick = new AtomicBoolean(true);
     private Drawable sourceBackground;
 
     public UniversalButton(Context context) {
@@ -39,9 +42,8 @@ public class UniversalButton extends Button {
                 Bitmap bitmap;
                 //按下后背景改变为深色
                 if (!isStillDown) {
-                    if (isFirstClick) {
+                    if(isFirstClick.compareAndSet(true,false)){
                         sourceBackground = getBackground();
-                        isFirstClick = false;
                     }
                     //如果没有背景，截图
                     if (sourceBackground == null) {
@@ -54,6 +56,7 @@ public class UniversalButton extends Button {
                         int color = ((ColorDrawable) sourceBackground).getColor();
                         int destColor = makePressColor(color, 255);
                         setBackgroundDrawable(new ColorDrawable(destColor));
+                        isStillDown = true;
                         break;
                     }
                     //如果背景是图片
