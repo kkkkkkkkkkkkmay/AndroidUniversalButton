@@ -1,4 +1,3 @@
-package com.alibaba.demo.ui.component.wights.common;
 
 import android.content.Context;
 import android.graphics.Bitmap;
