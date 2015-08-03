@@ -1,3 +1,4 @@
+package com.alibaba.demo.ui.component.wights.common;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -25,6 +26,11 @@ public class UniversalButton extends Button {
     private AtomicBoolean isFirstClick = new AtomicBoolean(true);
     private Drawable sourceBackground;
 
+    //是否有自定义的按下图片
+    private boolean hasCustomSetting=false;
+    private Bitmap onActionDownPicBitmap;
+
+
     public UniversalButton(Context context) {
         super(context);
 
@@ -33,6 +39,13 @@ public class UniversalButton extends Button {
     public UniversalButton(Context context, AttributeSet attrs) {
         super(context, attrs);
 
+    }
+
+
+    public UniversalButton(Context context, AttributeSet attrs,Bitmap onActionDownPicBitmap) {
+        super(context, attrs);
+        this.onActionDownPicBitmap=onActionDownPicBitmap;
+        hasCustomSetting=true;
     }
 
     @Override
@@ -44,6 +57,14 @@ public class UniversalButton extends Button {
                 if (!isStillDown) {
                     if(isFirstClick.compareAndSet(true,false)){
                         sourceBackground = getBackground();
+                    }
+                    //如果有自定义设置，那么应用
+                    if(hasCustomSetting){
+                        if(onActionDownPicBitmap!=null){
+                            //应该自定义的按下图
+                            setBackgroundDrawable(new BitmapDrawable(onActionDownPicBitmap));
+                            break;
+                        }
                     }
                     //如果没有背景，截图
                     if (sourceBackground == null) {
@@ -105,5 +126,10 @@ public class UniversalButton extends Button {
         g = (g - 30 < 0) ? 0 : g - 30;
         b = (b - 30 < 0) ? 0 : b - 30;
         return Color.argb(alpha, r, g, b);
+    }
+
+    public void setOnActionDownPicBitmap(Bitmap onActionDownPicBitmap) {
+        this.onActionDownPicBitmap = onActionDownPicBitmap;
+        hasCustomSetting=true;
     }
 }
