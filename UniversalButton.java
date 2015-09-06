@@ -1,4 +1,3 @@
-
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -10,6 +9,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
+import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.widget.Button;
 
@@ -25,14 +25,20 @@ public class UniversalButton extends Button {
     private AtomicBoolean isFirstClick = new AtomicBoolean(true);
     private Drawable sourceBackground;
 
-    //是否有自定义的按下图片
-    private boolean hasCustomSetting=false;
-    private Bitmap onActionDownPicBitmap;
 
+    //是否有自定义的按下图片
+    private boolean hasCustomSetting = false;
+    private Bitmap onActionDownPicBitmap;
+    //自定义背景图片按下时的深度
+    private int pressColorDeep = 15;//0-100
 
     public UniversalButton(Context context) {
         super(context);
+    }
 
+    public UniversalButton(Context context, String text) {
+        super(context);
+        setText(text);
     }
 
     public UniversalButton(Context context, AttributeSet attrs) {
@@ -41,67 +47,32 @@ public class UniversalButton extends Button {
     }
 
 
-    public UniversalButton(Context context, AttributeSet attrs,Bitmap onActionDownPicBitmap) {
+    public UniversalButton(Context context, AttributeSet attrs, Bitmap onActionDownPicBitmap) {
         super(context, attrs);
-        this.onActionDownPicBitmap=onActionDownPicBitmap;
-        hasCustomSetting=true;
+        this.onActionDownPicBitmap = onActionDownPicBitmap;
+        hasCustomSetting = true;
     }
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent event) {
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
-                Bitmap bitmap;
                 //按下后背景改变为深色
                 if (!isStillDown) {
-                    if(isFirstClick.compareAndSet(true,false)){
+                    if (isFirstClick.compareAndSet(true, false)) {
                         sourceBackground = getBackground();
                     }
-                    //如果有自定义设置，那么应用
-                    if(hasCustomSetting){
-                        if(onActionDownPicBitmap!=null){
-                            //应该自定义的按下图
-                            setBackgroundDrawable(new BitmapDrawable(onActionDownPicBitmap));
-                            break;
-                        }
-                    }
-                    //如果没有背景，截图
-                    if (sourceBackground == null) {
-                        this.setDrawingCacheEnabled(true);
-                        this.buildDrawingCache();
-                        bitmap = this.getDrawingCache();
-                    }
                     //如果背景是纯色
-                    else if (sourceBackground instanceof ColorDrawable) {
+                    if (sourceBackground instanceof ColorDrawable) {
                         int color = ((ColorDrawable) sourceBackground).getColor();
                         int destColor = makePressColor(color, 255);
                         setBackgroundDrawable(new ColorDrawable(destColor));
                         isStillDown = true;
                         break;
-                    }
-                    //如果背景是图片
-                    else if (sourceBackground instanceof BitmapDrawable) {
-                        bitmap = ((BitmapDrawable) sourceBackground).getBitmap().copy(Bitmap.Config.ARGB_8888, true);
-                    }
-                    else {
-                        this.setDrawingCacheEnabled(true);
-                        this.buildDrawingCache();
-                        bitmap = this.getDrawingCache();
+                    } else {
+                        setBackgroundDrawable(new BitmapDrawable(getProcessedBitmap()));
                     }
 
-                    ColorMatrix cMatrix = new ColorMatrix();
-                    int brightness = -15;
-                    cMatrix.set(new float[]{1, 0, 0, 0, brightness, 0, 1,
-                            0, 0, brightness,// 改变亮度
-                            0, 0, 1, 0, brightness, 0, 0, 0, 1, 0});
-                    Paint paint = new Paint();
-                    paint.setColorFilter(new ColorMatrixColorFilter(cMatrix));
-
-                    Canvas canvas = new Canvas(bitmap);
-                    canvas.drawBitmap(bitmap, 0, 0, paint);
-                    setBackgroundDrawable(new BitmapDrawable(bitmap));
-
-                    cMatrix.reset();
                     isStillDown = true;
                 }
                 break;
@@ -129,6 +100,80 @@ public class UniversalButton extends Button {
 
     public void setOnActionDownPicBitmap(Bitmap onActionDownPicBitmap) {
         this.onActionDownPicBitmap = onActionDownPicBitmap;
-        hasCustomSetting=true;
+        hasCustomSetting = true;
+    }
+
+
+    public Bitmap getProcessedBitmap() {
+        Bitmap bitmap = null;
+        //如果有自定义设置，那么应用
+        if (hasCustomSetting) {
+            if (onActionDownPicBitmap != null) {
+                return onActionDownPicBitmap;
+            }
+        }
+        //如果没有背景，截图
+        if (sourceBackground == null) {
+            this.setDrawingCacheEnabled(true);
+            this.buildDrawingCache();
+            bitmap = this.getDrawingCache();
+        }
+
+        //如果背景是图片
+        else if (sourceBackground instanceof BitmapDrawable) {
+            bitmap = ((BitmapDrawable) sourceBackground).getBitmap().copy(Bitmap.Config.ARGB_8888, true);
+        } else {
+            this.setDrawingCacheEnabled(true);
+            this.buildDrawingCache();
+            bitmap = this.getDrawingCache();
+        }
+
+        ColorMatrix cMatrix = new ColorMatrix();
+        cMatrix.set(new float[]{1, 0, 0, 0, -pressColorDeep, 0, 1,
+                0, 0, -pressColorDeep,// 改变亮度
+                0, 0, 1, 0, -pressColorDeep, 0, 0, 0, 1, 0});
+        Paint paint = new Paint();
+        paint.setColorFilter(new ColorMatrixColorFilter(cMatrix));
+
+        Canvas canvas = new Canvas(bitmap);
+        canvas.drawBitmap(bitmap, 0, 0, paint);
+        cMatrix.reset();
+        return bitmap;
+    }
+
+    /**
+     * 自适应文字大小
+     */
+    private void autoFitTextSize() {
+        Paint p = getPaint();
+        p.setTypeface(getTypeface());
+        p.setTextSize(getTextSize());
+
+        float needWidth = getPaddingLeft() + getPaddingRight() + p.measureText(getText().toString());
+        Paint.FontMetrics fm = p.getFontMetrics();
+        float needHeight = (float) (Math.ceil(fm.descent - fm.ascent) + 1);
+        if (needWidth > getWidth()) {
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, getTextSize() - 0.5f);
+            autoFitTextSize();
+        }
+        if (needHeight > getHeight()) {
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, getTextSize() - 0.2f);
+            autoFitTextSize();
+        }
+
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+        autoFitTextSize();
+    }
+
+    public int getPressColorDeep() {
+        return pressColorDeep;
+    }
+
+    public void setPressColorDeep(int pressColorDeep) {
+        this.pressColorDeep = pressColorDeep;
     }
 }
