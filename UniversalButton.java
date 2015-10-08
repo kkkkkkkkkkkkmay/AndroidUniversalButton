@@ -1,3 +1,6 @@
+
+import android.animation.ArgbEvaluator;
+import android.animation.ObjectAnimator;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -30,7 +33,10 @@ public class UniversalButton extends Button {
     private boolean hasCustomSetting = false;
     private Bitmap onActionDownPicBitmap;
     //自定义背景图片按下时的深度
-    private int pressColorDeep = 15;//0-100
+    private int pressColorDeep = 20;//0-100
+
+    //用于属性动画
+    private int color;
 
     public UniversalButton(Context context) {
         super(context);
@@ -64,9 +70,16 @@ public class UniversalButton extends Button {
                     }
                     //如果背景是纯色
                     if (sourceBackground instanceof ColorDrawable) {
+
                         int color = ((ColorDrawable) sourceBackground).getColor();
                         int destColor = makePressColor(color, 255);
-                        setBackgroundDrawable(new ColorDrawable(destColor));
+
+                        ObjectAnimator anim = ObjectAnimator.ofObject(this, "color", new ArgbEvaluator(),
+                                color, destColor);
+
+                        anim.setDuration(500);
+                        anim.start();
+
                         isStillDown = true;
                         break;
                     } else {
@@ -77,15 +90,33 @@ public class UniversalButton extends Button {
                 }
                 break;
             case MotionEvent.ACTION_UP:
-                isStillDown = false;
-                setBackgroundDrawable(sourceBackground);
+                cancel();
                 break;
             case MotionEvent.ACTION_CANCEL:
-                isStillDown = false;
-                setBackgroundDrawable(sourceBackground);
+                cancel();
                 break;
         }
         return super.dispatchTouchEvent(event);
+    }
+
+    private void cancel() {
+
+        isStillDown = false;
+        //如果背景是纯色
+        if (sourceBackground instanceof ColorDrawable) {
+
+            int color = ((ColorDrawable) sourceBackground).getColor();
+            int destColor = makePressColor(color, 255);
+
+            ObjectAnimator anim = ObjectAnimator.ofObject(this, "color", new ArgbEvaluator(),
+                    destColor, color);
+
+            anim.setDuration(500);
+            anim.start();
+            
+        } else {
+            setBackgroundDrawable(sourceBackground);
+        }
     }
 
     private int makePressColor(int color, int alpha) {
@@ -175,5 +206,14 @@ public class UniversalButton extends Button {
 
     public void setPressColorDeep(int pressColorDeep) {
         this.pressColorDeep = pressColorDeep;
+    }
+
+    public int getColor() {
+        return color;
+    }
+
+    public void setColor(int color) {
+        this.color = color;
+        setBackgroundDrawable(new ColorDrawable(color));
     }
 }
