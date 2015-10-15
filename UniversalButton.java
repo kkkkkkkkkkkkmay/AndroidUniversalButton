@@ -77,7 +77,7 @@ public class UniversalButton extends Button {
                         ObjectAnimator anim = ObjectAnimator.ofObject(this, "color", new ArgbEvaluator(),
                                 color, destColor);
 
-                        anim.setDuration(500);
+                        anim.setDuration(200);
                         anim.start();
 
                         isStillDown = true;
